@@ -1,0 +1,212 @@
+stages:
+  - build
+  - deploy
+  - tag-stable
+  - emergency-deploy
+
+.run_docker_container_script: &run_docker_container_script
+  - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY
+  - echo "TAG_LATEST is $TAG_LATEST"
+  - docker pull $TAG_LATEST
+  - docker container rm -f $CONTAINER_NAME || true
+  - cat $ENVIROMENT_VARIABLES >> .env
+  - docker run -d -p 8000:8000 --env-file .env --mount source=storage,target=/app/storage --name $CONTAINER_NAME $TAG_LATEST
+
+variables:
+  TAG_LATEST: "$CI_REGISTRY_IMAGE:$VERSION"
+  DOCKER_TLS_CERTDIR: ""
+  STABLE_VERSION: "$CI_REGISTRY_IMAGE:stable"
+  SECURE_FILES_DOWNLOAD_PATH: '.keys/'
+
+build:
+  stage: build
+  image: docker:latest
+  when: manual
+  services:
+    - docker:dind
+  rules:
+    - changes:
+        - CHANGELOG.md
+      when: never
+    - if: $CI_COMMIT_BRANCH == "test"
+    - if: $CI_COMMIT_BRANCH == "stage"
+  before_script:
+    - export GIT_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
+    - export GIT_AUTHOR_NAME=$(git log -1 --pretty=format:'%an')
+    - git config --global user.email "$GIT_AUTHOR_EMAIL"
+    - git config --global user.name "$GIT_AUTHOR_NAME"
+    - echo  $GIT_AUTHOR_EMAIL
+    - echo  $GIT_AUTHOR_NAME
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - cat $TEST_ENVIROMENT_VARIABLES >> .env
+  script:
+    - git checkout $CI_COMMIT_REF_NAME
+    - git pull
+    - export VERSION=$(grep -Eo '\[\d+\.\d+\.\d+\]' CHANGELOG.md | sed -E 's/\[|\]//g' | head -n 1)
+    - export NEW_VERSION=$(echo $VERSION | awk -F. '{print $1 "." $2 "." $3+1}')
+    - if [[ "$CI_COMMIT_BRANCH" == "test" ]]; then export TAG_LATEST="$CI_REGISTRY_IMAGE:test_$NEW_VERSION"; fi
+    - if [[ "$CI_COMMIT_BRANCH" == "stage" ]]; then export TAG_LATEST="$CI_REGISTRY_IMAGE:stage_$NEW_VERSION"; fi
+    - DATE=$(date +'%Y-%m-%d')
+    - FILES_CHANGED=$(git diff --name-only HEAD~1)
+    - echo -e "<b>[$NEW_VERSION]</b> - <b>$DATE</b>" > new_entry.txt
+    - echo "<ul>" >> new_entry.txt
+    - for file in $FILES_CHANGED; do echo "<li>$file</li>" >> new_entry.txt; done
+    - echo "</ul>" >> new_entry.txt
+    - echo "" >> new_entry.txt
+    - cat new_entry.txt CHANGELOG.md > temp && mv temp CHANGELOG.md
+    - rm new_entry.txt
+    - git add CHANGELOG.md
+    - git commit -m "Bump version to $NEW_VERSION"
+    - git push http://gitlab-ci-token:$CI_TOKEN@${CI_SERVER_NAME}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME} $CI_COMMIT_REF_NAME
+    - export TAG_LATEST="$CI_REGISTRY_IMAGE:$NEW_VERSION"
+    - echo $TAG_LATEST > tag_latest.txt
+    - apk update && apk add curl && apk add bash && curl --silent "https://gitlab.com/gitlab-org/incubation-engineering/mobile-devops/download-secure-files/-/raw/main/installer" | bash
+    - docker build --no-cache -t $TAG_LATEST .
+    - docker push $TAG_LATEST
+  artifacts:
+    paths:
+      - tag_latest.txt
+  tags:
+    - test-eu
+
+deploy_test:
+  stage: deploy
+  rules:
+    - changes:
+        - CHANGELOG.md
+      when: never
+    - if: $CI_COMMIT_BRANCH == "test"
+  when: manual
+  script:
+    - export TAG_LATEST=$(cat tag_latest.txt)
+    - export CONTAINER_NAME="test.backend"
+    - export ENVIROMENT_VARIABLES=$TEST_ENVIROMENT_VARIABLES
+    - *run_docker_container_script
+  dependencies:
+    - build
+  artifacts:
+    paths:
+      - tag_latest.txt
+  tags:
+    - test-dep
+
+deploy_stage:
+  stage: deploy
+  rules:
+    - changes:
+        - CHANGELOG.md
+      when: never
+    - if: $CI_COMMIT_BRANCH == "stage"
+  when: manual
+  script:
+    - export TAG_LATEST=$(cat tag_latest.txt)
+    - export CONTAINER_NAME="stage.backend"
+    - export ENVIROMENT_VARIABLES=$STAGE_ENVIROMENT_VARIABLES
+    - *run_docker_container_script
+  dependencies:
+    - build
+  artifacts:
+    paths:
+      - tag_latest.txt
+  tags:
+    - dev
+
+deploy_production:
+  stage: deploy
+  rules:
+    - changes:
+        - CHANGELOG.md
+      when: never
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+  when: manual
+  script:
+    - export TAG_LATEST=$STABLE_VERSION
+    - export CONTAINER_NAME="prod.backend"
+    - export ENVIROMENT_VARIABLES=$PROD_ENVIROMENT_VARIABLES
+    - *run_docker_container_script
+  tags:
+    - production
+    - eu
+
+emergency-build-and-deploy:
+  stage: emergency-deploy
+  image: docker:latest
+  services:
+    - docker:dind
+  when: manual
+  rules:
+    - changes:
+        - CHANGELOG.md
+      when: never
+    - if: $CI_COMMIT_BRANCH == "main"
+  before_script:
+    - export GIT_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
+    - export GIT_AUTHOR_NAME=$(git log -1 --pretty=format:'%an')
+    - git config --global user.email "$GIT_AUTHOR_EMAIL"
+    - git config --global user.name "$GIT_AUTHOR_NAME"
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+  script:
+    - git checkout $CI_COMMIT_REF_NAME
+    - git merge --no-ff
+    - export VERSION=$(grep -Eo '\[\d+\.\d+\.\d+\]' CHANGELOG.md | sed -E 's/\[|\]//g' | head -n 1)
+    - export NEW_VERSION=$(echo $VERSION | awk -F. '{print $1 "." $2 "." $3+1}')
+    - DATE=$(date +'%Y-%m-%d')
+    - FILES_CHANGED=$(git diff --name-only HEAD~1)
+    - echo -e "<b>[$NEW_VERSION]</b> - <b>$DATE</b>" > new_entry.txt
+    - echo "<ul>" >> new_entry.txt
+    - for file in $FILES_CHANGED; do echo "<li>$file</li>" >> new_entry.txt; done
+    - echo "</ul>" >> new_entry.txt
+    - echo "" >> new_entry.txt
+    - cat new_entry.txt CHANGELOG.md > temp && mv temp CHANGELOG.md
+    - rm new_entry.txt
+    - git add CHANGELOG.md
+    - git commit -m "Bump version to $NEW_VERSION"
+    - git push http://gitlab-ci-token:$CI_TOKEN@${CI_SERVER_NAME}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME} $CI_COMMIT_REF_NAME
+    - export TAG_LATEST="$CI_REGISTRY_IMAGE:$NEW_VERSION"
+    - apk update && apk add curl && apk add bash && curl --silent "https://gitlab.com/gitlab-org/incubation-engineering/mobile-devops/download-secure-files/-/raw/main/installer" | bash
+    - docker build -t $TAG_LATEST .
+    - docker push $TAG_LATEST
+    - export CONTAINER_NAME="prod.backend"
+    - export ENVIROMENT_VARIABLES=$PROD_ENVIROMENT_VARIABLES
+    - *run_docker_container_script
+  tags:
+    - production
+    - eu
+
+
+tag-stable:
+  stage: tag-stable
+  image: docker:latest
+  when: manual
+  rules:
+    - changes:
+        - CHANGELOG.md
+      when: never
+    - if: $CI_COMMIT_BRANCH == "stage" && $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE == "push"
+  before_script:
+    - export GIT_AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
+    - export GIT_AUTHOR_NAME=$(git log -1 --pretty=format:'%an')
+    - git config --global user.email "$GIT_AUTHOR_EMAIL"
+    - git config --global user.name "$GIT_AUTHOR_NAME"
+    - echo  $GIT_AUTHOR_EMAIL
+    - echo  $GIT_AUTHOR_NAME
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - cat $TEST_ENVIROMENT_VARIABLES >> .env
+  script:
+    - git checkout $CI_COMMIT_REF_NAME
+    - git merge --no-ff
+    - export TAG_LATEST=$(cat tag_latest.txt)
+    - docker tag $TAG_LATEST $STABLE_VERSION
+    - docker push $STABLE_VERSION
+    - sed -i '1i [stable]' CHANGELOG.md
+    - git add CHANGELOG.md
+    - git commit -m "Add stable tag to CHANGELOG"
+    - git push http://gitlab-ci-token:$CI_TOKEN@${CI_SERVER_NAME}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME} $CI_COMMIT_REF_NAME
+  dependencies:
+    - build
+  artifacts:
+    paths:
+      - tag_latest.txt
+  tags:
+    - test-eu

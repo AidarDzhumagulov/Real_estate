@@ -1,0 +1,54 @@
+version: '3.7'
+
+services:
+  db:
+    container_name: athena_tokenizer_db_local
+    image: postgres:14.1-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    networks:
+      - my-network
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env
+
+  backend:
+    container_name: ${COMPOSE_PROJECT_NAME}.backend
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile-dev
+    entrypoint: /app/docker/backend/test-entrypoint.sh
+    ports:
+      - 8000:8000
+    networks:
+      - my-network
+    volumes:
+      - type: bind
+        source: ./logs/
+        target: /app/logs/
+      - type: bind
+        source: ./storage/
+        target: /app/storage/
+    env_file:
+        - .env
+    depends_on:
+      - db
+
+  clamAV:
+    image: mkodockx/docker-clamav:alpine
+    restart: always
+    ports:
+      - "3310:3310"
+    volumes:
+      - clam:/var/lib/clamav
+
+
+volumes:
+  postgres_data:
+  clam:
+
+networks:
+  my-network:
+    driver: bridge

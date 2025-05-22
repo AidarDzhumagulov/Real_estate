@@ -1,0 +1,4 @@
+include:
+  - project: 'athena/k8s-pipeline'
+    ref: 'main'
+    file: '/gitlab-ci.yml'
