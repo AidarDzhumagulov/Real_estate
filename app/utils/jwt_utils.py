@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
 
+from authx import AuthXConfig, AuthX
 from jose import ExpiredSignatureError, JWTError, jwt
-from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.authentication import AuthenticationError
 
 from app.config import settings
@@ -94,3 +94,13 @@ def refresh_access_token(refresh_token: str, is_mobile: bool) -> Tuple[str, str]
     new_access_token = create_access_token(data=new_payload)
     new_refresh_token = create_refresh_token(data=new_payload, is_mobile=is_mobile)
     return new_access_token, new_refresh_token
+
+
+config = AuthXConfig(
+     JWT_ALGORITHM=settings.JWT_ALGORITHM,
+     JWT_SECRET_KEY=settings.SECRET_KEY,
+     JWT_TOKEN_LOCATION=["headers"],
+)
+
+auth = AuthX(config=config)
+

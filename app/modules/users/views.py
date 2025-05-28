@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 
 from app.middlewares.request_processing import RequestProcessingRoute
 from app.modules.users import schemas
 from app.modules.users.logic import (
     UserBusinessLogic,
 )
+from app.modules.users.schemas import AuthCredentials
 
 user_router = APIRouter(
     tags=["Users"],
@@ -19,66 +20,16 @@ async def register_user(
     user_logic: UserBusinessLogic = Depends(UserBusinessLogic.from_request),
 ):
     return await user_logic.create(user=user)
-#
-#
-# @user_router.post("/login/")
-# async def login(
-#     # credentials: schemas.AuthCredentials,
-#     email: str = Form(),
-#     password: str = Form(),
-#     browser_data: Optional[str] = Form(None),
-#     session: AsyncSession = Depends(get_session),
-#     log_context: dict = Depends(get_log_context),
-#     # TODO(protasov): Transition to fingerprint data during the sign-in process.
-# ):
-#     credentials = schemas.AuthCredentials.model_validate(
-#         {
-#             "email": email,
-#             "password": password,
-#             "browser_data": browser_data,
-#         }
-#     )
-#     log_context["skip"] = True
-#     user = await logic.authenticate_user(session, credentials.email, credentials.password)
-#     auth_password = str(random.randint(100000, int("9" * 6)))
-#     if not isinstance(user, User):
-#         raise HTTPException(status_code=400, detail=user)
-#
-#     if user.tfa_enabled is True:
-#         user_auth_instance = UserAuth(
-#             user_id=user.id, auth_password=auth_password, is_mobile=x_is_mobile is not None
-#         )
-#         session.add(user_auth_instance)
-#         await session.commit()
-#         email_params = {
-#             "type": "email",
-#             "emails": [credentials.email],
-#             "body_type": "text",
-#             "action": "AUTH_USER",
-#             "message_params": {
-#                 "addressee_name": user.user_name,
-#                 "auth_password": auth_password,
-#             },
-#         }
-#         # await kafka_connector.send_message(
-#         #     message=email_params, topic_name=settings.KAFKA_NOTIFICATION_TOPIC
-#         # )
-#         return DefaultResponse(
-#             success=True,
-#             status_code=200,
-#             message={
-#                 "message": "Verification code was successfully sent by email",
-#             },
-#         )
-#
-#     access_token = await logic.create_access_token(user, fingerprint.id if fingerprint else None)
-#     refresh_token = await logic.create_refresh_token(
-#         user,
-#         fingerprint_id=fingerprint.id if fingerprint else None,
-#         is_mobile=x_is_mobile is not None,
-#     )
-#     return {"access_token": access_token, "refresh_token": refresh_token}
-#
+
+
+@user_router.post("/login/")
+async def login(
+    credentials: AuthCredentials,
+    response: Response,
+    user_logic: UserBusinessLogic = Depends(UserBusinessLogic.from_request),
+):
+    return await user_logic.login_user(credentials=credentials, response=response)
+
 # #
 # # @user_router.post("/login/verify/", response_model=schemas.Token)
 # # async def verify_login(

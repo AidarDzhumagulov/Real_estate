@@ -33,7 +33,6 @@ class InviteType(str, Enum):
 class AuthCredentials(BaseModel):
     email: EmailStr
     password: str
-    browser_data: Optional[str] = None
 
 
 class RefreshTokenSchema(BaseModel):

@@ -1,5 +1,5 @@
 from app.utils.hashing import Hasher
-from fastapi import HTTPException
+from fastapi import HTTPException, Response
 from sqlalchemy import select
 
 from app.base.logic import BaseLogic
@@ -8,7 +8,9 @@ from app.modules.users.filters import UserFilter
 from app.modules.users.models import (
     User,
 )
-
+from app.modules.users.schemas import AuthCredentials
+from app.config import settings
+from app.utils.jwt_utils import auth
 
 
 class UserBusinessLogic(BaseLogic, UserFilter):
@@ -48,3 +50,13 @@ class UserBusinessLogic(BaseLogic, UserFilter):
         )
         self.repository.session.add(user)
         return user
+
+    async def login_user(self, credentials: AuthCredentials, response: Response):
+        user = await self.get_user_by_email(credentials.email)
+        if not user:
+            raise HTTPException(status_code=400, detail="User not found")
+        if Hasher.verify_password(credentials.password, user.hashed_password):
+            token = auth.create_access_token(uid=str(user.id))
+            response.set_cookie(settings.JWT_ACCESS_COOKIE_NAME, token)
+            return {"access_token": token}
+        raise HTTPException(status_code=403, detail="Username or password incorrect")
