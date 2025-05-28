@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, Response
 
 from app.middlewares.request_processing import RequestProcessingRoute
-from app.modules.users import schemas
 from app.modules.users.logic import (
     UserBusinessLogic,
 )
-from app.modules.users.schemas import AuthCredentials
+from app.modules.users.schemas import AuthCredentials, UserBase
 
 user_router = APIRouter(
     tags=["Users"],
@@ -16,7 +15,7 @@ user_router = APIRouter(
 
 @user_router.post("/register/")
 async def register_user(
-    user: schemas.UserBase,
+    user: UserBase,
     user_logic: UserBusinessLogic = Depends(UserBusinessLogic.from_request),
 ):
     return await user_logic.create(user=user)

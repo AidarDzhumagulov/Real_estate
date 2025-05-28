@@ -11,7 +11,6 @@ class Listing(Base, MixinCRUD):
     __tablename__ = "listings"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
     title: Mapped[str] = mapped_column()
     description: Mapped[str] = mapped_column()
     price: Mapped[float] = mapped_column()

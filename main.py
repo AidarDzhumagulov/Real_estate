@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.middlewares.database_session import UniversalDBSessionMiddleware
 from app.modules.users.views import user_router
+from app.modules.listings.views import listing_router
 
 middlewares = [
     # NOTE(axd1x8a): The order of middlewares is important
@@ -28,6 +29,7 @@ middlewares = [
 # API Endpoints
 routes = [
     user_router,
+    listing_router,
 ]
 
 
