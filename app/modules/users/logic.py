@@ -1,7 +1,3 @@
-from uuid import UUID
-
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.utils.hashing import Hasher
 from fastapi import HTTPException, Response
 from sqlalchemy import select
@@ -64,9 +60,3 @@ class UserBusinessLogic(BaseLogic, UserFilter):
             response.set_cookie(settings.JWT_ACCESS_COOKIE_NAME, token)
             return {"access_token": token}
         raise HTTPException(status_code=403, detail="Username or password incorrect")
-
-    @staticmethod
-    async def get_by_id(session: AsyncSession, id_: UUID):
-        stmt = select(self.Model).where(self.Model.id == id_)
-        result = await self.repository.session.execute(stmt)
-        return result.scalar_one_or_none()
