@@ -1,8 +1,10 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends
 
 from app.middlewares.request_processing import RequestProcessingRoute
 from app.modules.listings.logic import ListingBusinessLogic
-from app.modules.listings.schemas import ListingCreate
+from app.modules.listings.schemas import ListingCreate, ListingGet, ListingUpdate
 from app.utils.jwt_utils import auth
 from app.utils.dependencies import get_current_user
 
@@ -22,6 +24,26 @@ async def create(
     return await listing_logic.create(listing=listing, current_user=current_user)
 
 
-@listing_router.get("/", dependencies=[Depends(auth.access_token_required)])
+@listing_router.get("/", response_model=list[ListingGet], dependencies=[Depends(auth.access_token_required)])
 async def get_all(listing_logic: ListingBusinessLogic = Depends(ListingBusinessLogic.from_request)):
-    return await listing_logic.get_all()
+    listings = await listing_logic.get_all()
+    return listings
+
+
+@listing_router.delete("/", dependencies=[Depends(auth.access_token_required)])
+async def delete_listing(
+        id_,
+        listing_logic: ListingBusinessLogic = Depends(ListingBusinessLogic.from_request),
+        current_user=Depends(get_current_user)):
+    return await listing_logic.delete(id_=id_, current_user=current_user)
+
+
+@listing_router.patch("/{id_}", response_model=ListingGet, dependencies=[Depends(auth.access_token_required)])
+async def update_listing(
+    id_: UUID,
+    listing: ListingUpdate,
+    listing_logic: ListingBusinessLogic = Depends(ListingBusinessLogic.from_request),
+    current_user=Depends(get_current_user)
+):
+    return await listing_logic.update(id_=id_, listing=listing, current_user=current_user)
+

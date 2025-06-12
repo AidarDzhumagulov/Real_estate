@@ -99,8 +99,9 @@ def refresh_access_token(refresh_token: str, is_mobile: bool) -> Tuple[str, str]
 config = AuthXConfig(
      JWT_ALGORITHM=settings.JWT_ALGORITHM,
      JWT_SECRET_KEY=settings.SECRET_KEY,
-     JWT_TOKEN_LOCATION=["cookies"],
+     JWT_TOKEN_LOCATION=["cookies", "headers"],
      JWT_COOKIE_CSRF_PROTECT=False,
+    JWT_ACCESS_TOKEN_EXPIRES=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
 )
 
 auth = AuthX(config=config)

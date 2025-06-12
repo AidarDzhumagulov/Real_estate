@@ -57,6 +57,6 @@ class UserBusinessLogic(BaseLogic, UserFilter):
             raise HTTPException(status_code=400, detail="User not found")
         if Hasher.verify_password(credentials.password, user.hashed_password):
             token = auth.create_access_token(uid=str(user.id))
-            response.set_cookie(settings.JWT_ACCESS_COOKIE_NAME, token)
+            response.set_cookie(key=settings.JWT_ACCESS_COOKIE_NAME, value=token, samesite="lax", secure=False, httponly=True)
             return {"access_token": token}
         raise HTTPException(status_code=403, detail="Username or password incorrect")

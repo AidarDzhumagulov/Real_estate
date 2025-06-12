@@ -5,6 +5,8 @@ from app.modules.users.logic import (
     UserBusinessLogic,
 )
 from app.modules.users.schemas import AuthCredentials, UserBase
+from app.utils.dependencies import get_current_user
+from app.utils.jwt_utils import auth
 
 user_router = APIRouter(
     tags=["Users"],
@@ -28,6 +30,14 @@ async def login(
     user_logic: UserBusinessLogic = Depends(UserBusinessLogic.from_request),
 ):
     return await user_logic.login_user(credentials=credentials, response=response)
+
+
+@user_router.get("/", dependencies=[Depends(auth.access_token_required)])
+async def get_user(
+    user_logic: UserBusinessLogic = Depends(UserBusinessLogic.from_request),
+    current_user=Depends(get_current_user)
+):
+    return current_user
 
 # #
 # # @user_router.post("/login/verify/", response_model=schemas.Token)

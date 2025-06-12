@@ -38,20 +38,9 @@ class Settings(BaseSettings):
     LOGLEVEL: str = "DEBUG"
 
     TMP_STORAGE_PATH: Path
-    AGREEMENTS_STORAGE_PATH: Path
-    STORAGE_TYPE: str = "S3"
     STRIPE_API_KEY: str
     STRIPE_SECRET: str
     STRIPE_WH_SECRET: str
-
-    DO_SPACE_BUCKET: str
-    DO_SPACE_FOLDER: str
-    DO_SPACE_AGREEMENT_FOLDER: str
-    DO_SPACE_IMAGE_FOLDER: str
-    DO_SPACE_URL: str
-    DO_SPACE_ORIGIN_URL: str
-    DO_SPACE_KEY: str
-    DO_SPACE_SECRET: str
 
     @property
     def DO_SPACE_URL_WITH_BUCKET(self) -> str:  # noqa: N802

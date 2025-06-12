@@ -8,6 +8,11 @@ from app.config import settings
 from app.middlewares.database_session import UniversalDBSessionMiddleware
 from app.modules.users.views import user_router
 from app.modules.listings.views import listing_router
+from app.modules.attachments.views import attachment_router
+
+
+origins = ["http://localhost:5173"]
+
 
 middlewares = [
     # NOTE(axd1x8a): The order of middlewares is important
@@ -16,20 +21,19 @@ middlewares = [
     # good luck :)
     Middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
-        expose_headers=["Content-Disposition"],
     ),
     Middleware(UniversalDBSessionMiddleware),
 ]
 
 
-# API Endpoints
 routes = [
     user_router,
     listing_router,
+    attachment_router,
 ]
 
 

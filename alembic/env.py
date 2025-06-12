@@ -10,6 +10,7 @@ from alembic.script import write_hooks
 from app.database.session import Base, async_engine
 
 from app.modules.listings.models import *  # noqa: F403
+from app.modules.attachments.models import *  # noqa: F403
 from app.modules.users.models import *  # noqa: F403
 
 # this is the Alembic Config object, which provides
