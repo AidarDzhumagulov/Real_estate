@@ -1,0 +1,87 @@
+.hero-banner {
+    position: relative;
+    height: 100vh;
+    width: 100%;
+    background-size: cover;
+    background-position: center;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+    top: 0;
+}
+
+.hero-banner .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1;
+}
+
+.hero-banner .content {
+    position: relative;
+    z-index: 2;
+    top: var(--header-height);
+    max-width: 800px;
+    padding: 0 2rem;
+    margin: 0;
+}
+
+.hero-banner h1 {
+    font-size: 4rem;
+    margin-bottom: 2rem;
+    font-weight: 700;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.hero-banner p {
+    font-size: 1.5rem;
+    margin-bottom: 3rem;
+    line-height: 1.6;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.hero-banner button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 1.2rem 3rem;
+    font-size: 1.2rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.hero-banner button:hover {
+    background-color: #2980b9;
+}
+
+@media (max-width: 768px) {
+    .hero-banner {
+        height: 100vh;
+        min-height: 600px;
+    }
+
+    .hero-banner h1 {
+        font-size: 2.5rem;
+    }
+
+    .hero-banner p {
+        font-size: 1.2rem;
+        margin-bottom: 2rem;
+    }
+
+    .hero-banner button {
+        padding: 1rem 2rem;
+        font-size: 1.1rem;
+    }
+}
