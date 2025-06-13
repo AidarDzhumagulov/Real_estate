@@ -4,6 +4,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.session import Base
+from app.modules.users.models import User
 from app.utils.database.crud import MixinCRUD
 
 
@@ -23,6 +24,7 @@ class Listing(Base, MixinCRUD):
         secondary="listings_attachments",
         back_populates="listings"
     )
+    creator: Mapped["User"] = relationship(back_populates="listings", foreign_keys="Listing.created_by")
 
 
 class ListingAttachment(Base, MixinCRUD):

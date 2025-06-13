@@ -1,7 +1,9 @@
-from typing import Optional, List
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.modules.users.models import User
 
 
 class ListingCreate(BaseModel):
@@ -29,6 +31,11 @@ class Attachment(BaseModel):
 
     id: UUID
 
+class GetUser(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_name: str
+
 class ListingGet(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -39,5 +46,6 @@ class ListingGet(BaseModel):
     property_type: str
     address: str
     city: str
+    creator: Optional[GetUser] = None
 
     attachment_ids: Optional[list[Attachment]] = Field(default=None, alias="attachments")

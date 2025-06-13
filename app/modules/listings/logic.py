@@ -32,7 +32,12 @@ class ListingBusinessLogic(BaseLogic):
         return listing
 
     async def get_all(self):
-        stmt = select(self.Model).where(self.Model.deleted_at.is_(None), self.Model.deleted_by.is_(None)).options(joinedload(self.Model.attachments)).order_by(self.Model.created_at.desc())
+        stmt = (
+            select(self.Model)
+            .where(self.Model.deleted_at.is_(None), self.Model.deleted_by.is_(None))
+            .options(joinedload(self.Model.attachments), joinedload(self.Model.creator))
+            .order_by(self.Model.created_at.desc())
+            )
         result = await self.repository.session.execute(stmt)
         listings = result.unique().scalars().all()
         return listings

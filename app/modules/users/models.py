@@ -1,17 +1,20 @@
 import enum
 import uuid
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from sqlalchemy import FetchedValue, Enum
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import (
     Mapped,
-    mapped_column,
+    mapped_column, relationship,
 )
 from sqlalchemy.sql.functions import concat
 
 from app.database.session import Base
 from app.utils.database.crud import MixinCRUD
+
+if TYPE_CHECKING:
+    from app.modules.listings.models import Listing
 
 
 class UserRole(enum.Enum):
@@ -36,6 +39,8 @@ class User(Base, MixinCRUD):
     phone_number: Mapped[Optional[str]] = mapped_column(nullable=True)
     user_avatar_url: Mapped[Optional[str]] = mapped_column(nullable=True)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.CLIENT)
+
+    listings: Mapped[list["Listing"]] = relationship(back_populates="creator", foreign_keys="Listing.created_by")
 
     @property
     def is_authenticated(self) -> bool:

@@ -16,7 +16,7 @@ from app.utils.jwt_utils import auth
 class UserBusinessLogic(BaseLogic, UserFilter):
     Model = User
 
-    async def get_user_by_email(self, email: str):
+    async def get_user_by_email(self, email: str) -> User:
         return await self.repository.session.scalar(select(self.Model).where(self.Model.email == email))
 
     async def create(
@@ -58,5 +58,5 @@ class UserBusinessLogic(BaseLogic, UserFilter):
         if Hasher.verify_password(credentials.password, user.hashed_password):
             token = auth.create_access_token(uid=str(user.id))
             response.set_cookie(key=settings.JWT_ACCESS_COOKIE_NAME, value=token, samesite="lax", secure=False, httponly=True)
-            return {"access_token": token}
+            return {"access_token": token, "full_name": user.user_name}
         raise HTTPException(status_code=403, detail="Username or password incorrect")

@@ -24,7 +24,7 @@ async def create(
     return await listing_logic.create(listing=listing, current_user=current_user)
 
 
-@listing_router.get("/", response_model=list[ListingGet], dependencies=[Depends(auth.access_token_required)])
+@listing_router.get("/", response_model=list[ListingGet])
 async def get_all(listing_logic: ListingBusinessLogic = Depends(ListingBusinessLogic.from_request)):
     listings = await listing_logic.get_all()
     return listings

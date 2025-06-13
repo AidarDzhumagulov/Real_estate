@@ -22,6 +22,6 @@ async def upload(
     return await attachment_logic.create(file=file, current_user=current_user)
 
 
-@attachment_router.get(f"/", dependencies=[Depends(auth.access_token_required)])
+@attachment_router.get(f"/")
 async def download(id_: str, attachment_logic: AttachmentBusinessLogic = Depends(AttachmentBusinessLogic.from_request)) -> StreamingResponse:
     return await attachment_logic.get(id_)
