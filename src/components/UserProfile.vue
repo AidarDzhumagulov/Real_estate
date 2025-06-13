@@ -65,7 +65,7 @@ export default {
   methods: {
     async loadProfile() {
       try {
-        const response = await axios.get('http://localhost:8000/api/users/profile', {
+        const response = await axios.get('http://localhost:8000/api/users/', {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('authToken')}`
           }
@@ -118,9 +118,15 @@ export default {
       }
     },
     cancel() {
-      Object.assign(this.profileData, this.savedData);
-      this.isDataChanged = false;
+      if (this.isDataChanged) {
+        if (confirm('У вас есть несохранённые изменения. Вы уверены, что хотите покинуть страницу?')) {
+          this.$router.push('/');
+        }
+      } else {
+        this.$router.push('/');
+      }
     }
+
   },
   created() {
     this.loadProfile();

@@ -357,7 +357,7 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: #3498db;
+  border-color: #02f98a;
   box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
 }
 
@@ -377,13 +377,13 @@ input:focus, select:focus, textarea:focus {
 }
 
 .submit-btn {
-  background-color: #3498db;
+  background-color: #34db8a;
   color: white;
   flex: 2;
 }
 
 .submit-btn:hover:not(:disabled) {
-  background-color: #2980b9;
+  background-color: #37b929;
 }
 
 .submit-btn:disabled {

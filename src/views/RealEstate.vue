@@ -278,7 +278,7 @@ h1 {
 .details-button {
   width: 100%;
   padding: 0.75rem;
-  background-color: #3498db;
+  background-color: #329de3;
   color: white;
   border: none;
   border-radius: 4px;
@@ -288,7 +288,7 @@ h1 {
 }
 
 .details-button:hover {
-  background-color: #2980b9;
+  background-color: #0562f7;
 }
 
 .edit-button {

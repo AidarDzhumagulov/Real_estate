@@ -18,7 +18,6 @@ export async function createListing(payload, token) {
 export async function getListing(token) {
     const response = await axios.get(`${API_BASE_URL}/listings/`, {
         headers: {
-            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
     });

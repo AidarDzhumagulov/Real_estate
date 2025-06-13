@@ -21,7 +21,11 @@
       @close="showLogin = false"
       @login-success="handleLoginSuccess"
     />
-    <RegisterModal v-if="showRegister" @close="showRegister = false" />
+    <RegisterModal 
+      v-if="showRegister" 
+      @close="showRegister = false"
+      @register-success="handleRegisterSuccess"
+    />
     <AddListingForm 
       v-if="showAddForm" 
       @add="handleAdd" 
@@ -99,34 +103,67 @@ export default {
   },
   async created() {
     await this.initializeApp();
-    window.addEventListener('user-logged-in', this.onGlobalLogin);
   },
   methods: {
     async initializeApp() {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        await this.loadListings();
-      }
-    },
-
-    unmounted() {
-      window.removeEventListener('user-logged-in', this.onGlobalLogin);
-    },
-
-    async onGlobalLogin() {
-      this.showLogin = false;
       await this.loadListings();
     },
 
+    async handleLoginSuccess(userData) {
+      console.log('Обработка успешного входа в App.vue:', userData);
+      
+      // Закрываем модальное окно входа
+      this.showLogin = false;
+      
+      // Обновляем состояние аутентификации в хедере
+      if (this.$refs.header) {
+        this.$refs.header.checkAuth();
+      }
+      
+      // Загружаем объявления
+      await this.loadListings();
+      
+      // Переходим на главную страницу
+      if (this.$route.path !== '/') {
+        await this.$router.push('/');
+      }
+      
+      // Диспатчим событие для других компонентов
+      window.dispatchEvent(new Event('user-logged-in'));
+    },
+
+    async handleRegisterSuccess(userData) {
+      console.log('Обработка успешной регистрации в App.vue:', userData);
+      
+      // Закрываем модальное окно регистрации
+      this.showRegister = false;
+      
+      // Обновляем состояние аутентификации в хедере
+      if (this.$refs.header) {
+        this.$refs.header.checkAuth();
+      }
+      
+      // Загружаем объявления
+      await this.loadListings();
+      
+      // Переходим на главную страницу
+      if (this.$route.path !== '/') {
+        await this.$router.push('/');
+      }
+      
+      // Диспатчим событие для других компонентов
+      window.dispatchEvent(new Event('user-logged-in'));
+    },
+
     // Функция для загрузки данных изображения
-    async loadImageData(attachmentId, token) {
+    async loadImageData(attachmentId) {
       // Проверяем кэш
       if (this.imageCache.has(attachmentId)) {
         return this.imageCache.get(attachmentId);
       }
 
       try {
-        const imageData = await loadAttachment(attachmentId, token);
+        const imageData = await loadAttachment(attachmentId);
         // Сохраняем в кэш
         this.imageCache.set(attachmentId, imageData);
         return imageData;
@@ -137,13 +174,13 @@ export default {
     },
 
     // Функция для загрузки всех изображений объявления
-    async loadListingImages(listing, token) {
+    async loadListingImages(listing) {
       if (!listing.attachments || listing.attachments.length === 0) {
         return [];
       }
 
       const imagePromises = listing.attachments.map(attachment => 
-        this.loadImageData(attachment.id, token)
+        this.loadImageData(attachment.id)
       );
 
       try {
@@ -157,15 +194,10 @@ export default {
     },
 
     async loadListings() {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        console.log('Нет токена для загрузки объявлений');
-        return;
-      }
 
       this.isLoading = true;
       try {
-        const data = await getListing(token);
+        const data = await getListing();
         
         if (!Array.isArray(data)) {
           console.error('API returned non-array data:', data);
@@ -188,6 +220,7 @@ export default {
           attachments: listing.attachments || [],
           createdAt: listing.created_at,
           updatedAt: listing.updated_at,
+          creator: listing.creator,
           ...listing
         }));
 
@@ -201,7 +234,7 @@ export default {
 
         // Загружаем изображения в следующем тике
         nextTick(() => {
-          this.loadAllListingsImages(newListings, token);
+          this.loadAllListingsImages(newListings);
         });
         
       } catch (error) {
@@ -212,7 +245,7 @@ export default {
         
         if (error.response?.status === 401) {
           localStorage.removeItem('authToken');
-          this.$refs.header?.updateAuthState();
+          this.$refs.header?.checkAuth();
         }
       } finally {
         this.isLoading = false;
@@ -220,7 +253,7 @@ export default {
     },
 
     // Асинхронная загрузка изображений для всех объявлений
-    async loadAllListingsImages(listings, token) {
+    async loadAllListingsImages(listings) {
       // Создаем копию текущих объявлений для безопасного обновления
       const updatedListings = [...this.listings];
       
@@ -229,7 +262,7 @@ export default {
         
         if (listing.attachments && listing.attachments.length > 0) {
           try {
-            const images = await this.loadListingImages(listing, token);
+            const images = await this.loadListingImages(listing);
             
             // Находим индекс объявления в актуальном массиве
             const listingIndex = updatedListings.findIndex(l => l.id === listing.id);
@@ -252,11 +285,6 @@ export default {
           this.listingsKey++;
         }
       }
-    },
-
-    async handleLoginSuccess() {
-      this.showLogin = false;
-      await this.loadListings();
     },
 
     async handleAdd(formData) {
@@ -324,7 +352,6 @@ export default {
         property_type: updatedListing.propertyType
       };
 
-
       try {
         const result = await updateListing(updatedListing.id, payload, token);
         
@@ -341,6 +368,7 @@ export default {
         this.isLoading = false;
       }
     },
+    
     async handleDelete(listing) {
       if (!listing || !listing.id) {
         console.error('Некорректные данные объявления для удаления:', listing);
@@ -385,9 +413,8 @@ export default {
     // Метод для принудительной перезагрузки изображений
     async reloadImages() {
       this.imageCache.clear();
-      const token = localStorage.getItem('authToken');
-      if (token && this.listings.length > 0) {
-        await this.loadAllListingsImages(this.listings, token);
+      if (this.listings.length > 0) {
+        await this.loadAllListingsImages(this.listings);
       }
     }
   },

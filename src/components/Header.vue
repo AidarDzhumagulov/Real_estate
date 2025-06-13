@@ -43,7 +43,11 @@
       <div class="actions">
         <AddButton @click="$emit('open-add')" />
 
-        <ProfileCircle @logout="logout" v-if="userEmail" />
+        <ProfileCircle 
+          v-if="isAuthenticated" 
+          @logout="handleLogout" 
+          ref="profileCircle"
+        />
         <template v-else>
           <LoginButton @click="$emit('open-login')" />
           <RegisterButton @click="$emit('open-register')" />
@@ -69,55 +73,27 @@ export default {
   },
   data() {
     return {
-      userEmail: localStorage.getItem('userEmail') || null,
+      isAuthenticated: false,
       isMenuOpen: false
     };
   },
-  watch: {
-    '$store.state.user': {
-      handler() {
-        this.checkLogin();
-      },
-      immediate: true
-    }
-  },
   methods: {
-    handleLogin(email) {
-      this.userEmail = email;
-      localStorage.setItem('userEmail', email);
-      this.$forceUpdate();
+    handleLogin(userData) {
+      this.isAuthenticated = true;
+      localStorage.setItem('authToken', userData.token);
+      localStorage.setItem('userEmail', userData.email);
+      localStorage.setItem('userFullName', userData.fullName);
+      window.dispatchEvent(new Event('user-logged-in'));
     },
-    checkLogin() {
-      const token = localStorage.getItem('authToken');
-      const email = localStorage.getItem('userEmail');
-      if (token && email) {
-        this.userEmail = email;
-        this.$forceUpdate();
-        // Обновляем ProfileCircle
-        this.$nextTick(() => {
-          const profileCircle = this.$refs.profileCircle;
-          if (profileCircle) {
-            profileCircle.updateUserInfo();
-          }
-        });
-      } else {
-        this.userEmail = null;
-        this.$forceUpdate();
-      }
-    },
-    logout() {
+    handleLogout() {
+      this.isAuthenticated = false;
       localStorage.removeItem('authToken');
       localStorage.removeItem('userEmail');
-      this.userEmail = null;
+      localStorage.removeItem('userFullName');
       window.dispatchEvent(new Event('user-logged-out'));
-      this.$forceUpdate();
     },
-    logout() {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('userEmail');
-      this.userEmail = null;
-      window.dispatchEvent(new Event('user-logged-out'));
-      this.$forceUpdate();
+    checkAuth() {
+      this.isAuthenticated = !!localStorage.getItem('authToken');
     },
     handleNavClick() {
       this.scrollToTop();
@@ -131,66 +107,13 @@ export default {
     }
   },
   mounted() {
-    this.checkLogin();
-    // слушаем события входа и выхода
-    window.addEventListener('user-logged-in', () => {
-      this.checkLogin();
-      this.$forceUpdate();
-    });
-    window.addEventListener('user-logged-out', () => {
-      this.checkLogin();
-      this.$forceUpdate();
-    });
+    this.checkAuth();
+    window.addEventListener('user-logged-in', this.checkAuth);
+    window.addEventListener('user-logged-out', this.checkAuth);
   },
   beforeUnmount() {
-    window.removeEventListener('user-logged-in', this.checkLogin);
-    window.removeEventListener('user-logged-out', this.checkLogin);
-  },
-  mounted() {
-    this.checkLogin();
-    // слушаем события входа и выхода
-    window.addEventListener('user-logged-in', () => {
-      this.checkLogin();
-      this.$forceUpdate(); // Принудительно обновляем компонент
-    });
-    window.addEventListener('user-logged-out', () => {
-      this.checkLogin();
-      this.$forceUpdate();
-    });
-  },
-  beforeUnmount() {
-    window.removeEventListener('user-logged-in', this.checkLogin);
-    window.removeEventListener('user-logged-out', this.checkLogin);
-  },
-  methods: {
-    scrollToTop() {
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      });
-    },
-    checkLogin() {
-      const token = localStorage.getItem('authToken');
-      const email = localStorage.getItem('userEmail');
-      if (token && email) {
-        this.userEmail = email;
-      } else {
-        this.userEmail = null;
-      }
-    },
-    logout() {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('userEmail');
-      this.userEmail = null;
-    },
-    handleNavClick() {
-      if (this.isMenuOpen) {
-        this.isMenuOpen = false;
-      }
-      if (this.$route.path === '/') {
-        this.scrollToTop();
-      }
-    }
+    window.removeEventListener('user-logged-in', this.checkAuth);
+    window.removeEventListener('user-logged-out', this.checkAuth);
   }
 };
 </script>
@@ -251,79 +174,44 @@ export default {
 .nav-list {
   display: flex;
   list-style: none;
-  gap: 0.5rem;
   margin: 0;
   padding: 0;
-  align-items: center;
+  gap: 1.5rem;
 }
 
 .nav-link {
   color: #ecf0f1;
   text-decoration: none;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  padding: 0.5rem 0.75rem;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  display: inline-block;
-  white-space: nowrap;
+  font-size: 1rem;
+  padding: 0.5rem;
+  transition: color 0.3s ease;
 }
 
 .nav-link:hover {
   color: #3498db;
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateY(-1px);
 }
 
 .actions {
   display: flex;
-  gap: 0.5rem;
   align-items: center;
-  flex: 0 0 auto;
-  z-index: 1001;
+  gap: 0.5rem;
 }
 
-.logout-btn {
-  background: transparent;
-  color: white;
-  border: 1px solid white;
-  padding: 0.4rem 0.8rem;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: 0.2s ease;
-  white-space: nowrap;
-  font-size: 0.9rem;
-}
-
-.logout-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.user-email {
-  color: white;
-  font-size: 0.9rem;
-  margin-right: 0.5rem;
-  white-space: nowrap;
-}
-
-/* Мобильное меню */
 .mobile-menu-btn {
   display: none;
   background: none;
   border: none;
-  padding: 0.5rem;
   cursor: pointer;
-  z-index: 1001;
-  margin-left: auto;
+  padding: 0.5rem;
 }
 
 .menu-icon {
   display: block;
-  width: 24px;
+  width: 25px;
   height: 2px;
-  background-color: white;
+  background-color: #ecf0f1;
   position: relative;
-  transition: background-color 0.3s;
+  transition: background-color 0.3s ease;
 }
 
 .menu-icon::before,
@@ -332,99 +220,47 @@ export default {
   position: absolute;
   width: 100%;
   height: 100%;
-  background-color: white;
-  transition: transform 0.3s;
+  background-color: #ecf0f1;
+  transition: transform 0.3s ease;
 }
 
 .menu-icon::before {
-  transform: translateY(-7px);
+  transform: translateY(-8px);
 }
 
 .menu-icon::after {
-  transform: translateY(7px);
+  transform: translateY(8px);
 }
 
-/* Мобильные стили */
 @media (max-width: 768px) {
-  .header {
-    height: var(--header-height);
-  }
-
-  .container {
-    padding-left: var(--container-padding);
-    padding-right: var(--container-padding);
-  }
-
   .mobile-menu-btn {
     display: block;
-    padding: 0.5rem;
-    margin-left: 1rem;
   }
 
   .nav {
     position: fixed;
-    top: 0;
+    top: var(--header-height);
     left: 0;
     right: 0;
-    bottom: 0;
     background: rgba(44, 62, 80, 0.98);
-    margin: 0;
-    padding: var(--header-height) var(--container-padding) var(--container-padding);
-    transform: translateX(-100%);
+    padding: 1rem;
+    transform: translateY(-100%);
     transition: transform 0.3s ease;
-    z-index: 1000;
+    z-index: 999;
   }
 
-  .nav.nav-open {
-    transform: translateX(0);
+  .nav-open {
+    transform: translateY(0);
   }
 
   .nav-list {
     flex-direction: column;
+    align-items: center;
     gap: 1rem;
-    align-items: flex-start;
-    width: 100%;
-  }
-
-  .nav-link {
-    font-size: 1.1rem;
-    padding: 0.75rem;
-    width: 100%;
   }
 
   .actions {
-    gap: 0.5rem;
+    margin-left: auto;
   }
-
-  .user-email {
-    display: none;
-  }
-}
-
-@media (max-width: 480px) {
-  .logo {
-    font-size: 1.1rem;
-  }
-
-  .actions {
-    gap: 0.25rem;
-  }
-
-  .nav-link {
-    font-size: 1rem;
-  }
-}
-
-/* Анимация кнопки меню */
-.nav-open .menu-icon {
-  background-color: transparent;
-}
-
-.nav-open .menu-icon::before {
-  transform: rotate(45deg);
-}
-
-.nav-open .menu-icon::after {
-  transform: rotate(-45deg);
 }
 </style>

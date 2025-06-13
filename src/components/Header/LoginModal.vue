@@ -5,14 +5,16 @@
       <h2>Вход в систему</h2>
       <form @submit.prevent="submitLogin">
         <label>
-          email:
+          Email:
           <input type="email" v-model="email" required />
         </label>
         <label>
           Пароль:
           <input type="password" v-model="password" required />
         </label>
-        <button type="submit">Войти</button>
+        <button type="submit" :disabled="isLoading">
+          {{ isLoading ? 'Вход...' : 'Войти' }}
+        </button>
       </form>
     </div>
   </div>
@@ -23,6 +25,7 @@ import { loginUser } from '../../api/auth';
 
 export default {
   name: 'LoginModal',
+  emits: ['close', 'login-success'],
   data() {
     return {
       email: '',
@@ -40,19 +43,27 @@ export default {
         };
 
         const response = await loginUser(payload);
-        console.log('Ответ сервера:', response.data);
 
         if (response.data?.access_token) {
-          localStorage.setItem('authToken', response.data.access_token);
-          localStorage.setItem('userEmail', this.email);
-          this.$emit('user-logged-in', { email: this.email });
-        }
+          const userData = {
+            token: response.data.access_token,
+            email: this.email,
+            fullName: response.data.full_name || this.email.split('@')[0]
+          };
 
-        window.dispatchEvent(new Event('user-logged-in'));
-        this.$emit('close');
+          // Сохраняем данные в localStorage
+          localStorage.setItem('authToken', userData.token);
+          localStorage.setItem('userEmail', userData.email);
+          localStorage.setItem('userFullName', userData.fullName);
+
+          
+          // Передаем событие родительскому компоненту (App.vue)
+          this.$emit('login-success', userData);
+          
+        } else {
+          throw new Error('Не получен токен от сервера');
+        }
       } catch (error) {
-        console.error('Ошибка входа:', error);
-        console.error('Ответ сервера:', error.response?.data);
         alert('Ошибка входа: ' + (error.response?.data?.detail || error.response?.data || 'Проверьте данные'));
       } finally {
         this.isLoading = false;

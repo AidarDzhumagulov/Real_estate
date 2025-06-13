@@ -1,5 +1,5 @@
 <template>
-  <div class="profile-circle" @click="toggleProfile">
+  <div ref="profileCircle" class="profile-circle" @click="toggleProfile">
     <div class="circle">
       <span v-if="initials">{{ initials }}</span>
       <img v-else-if="userImage" :src="userImage" alt="Profile" class="profile-image" />
@@ -7,125 +7,103 @@
     </div>
     <div v-if="showProfile" class="profile-dropdown">
       <div class="profile-info">
-        <div class="user-name">{{ userName }}</div>
+        <div class="user-fullname">{{ userFullName }}</div>
         <div class="user-email">{{ userEmail }}</div>
       </div>
       <div class="profile-actions">
         <button @click="goToProfile">Профиль</button>
-        <button @click="logout">Выйти</button>
+        <button @click="logout" class="logout-btn">Выйти</button>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { useRouter } from 'vue-router';
+
 export default {
   name: 'ProfileCircle',
-  data() {
-    return {
-      showProfile: false,
-      userName: localStorage.getItem('userEmail')?.split('@')[0] || 'Пользователь',
-      userEmail: localStorage.getItem('userEmail') || '',
-      userImage: '',
-      isAuthenticated: !!localStorage.getItem('authToken')
+  setup() {
+    const router = useRouter();
+    const showProfile = ref(false);
+    const profileCircle = ref(null);
+
+    const userFullName = ref(localStorage.getItem('userFullName') || 'Пользователь');
+    const userEmail = ref(localStorage.getItem('userEmail') || '');
+    const userImage = ref('');
+
+    const initials = computed(() => {
+      if (!userFullName.value) return '';
+      return userFullName.value
+        .split(' ')
+        .map(name => name[0].toUpperCase())
+        .join('');
+    });
+
+    const toggleProfile = () => {
+      showProfile.value = !showProfile.value;
     };
-  },
-  methods: {
-    toggleProfile() {
-      this.showProfile = !this.showProfile;
-    },
-    goToProfile() {
-      this.$router.push('/profile');
-      this.showProfile = false;
-    },
-    logout() {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('userEmail');
-      this.$router.push('/login');
-      this.showProfile = false;
-      this.userName = '';
-      this.userEmail = '';
-      this.isAuthenticated = false;
-    }
-  },
-  watch: {
-    '$route'() {
-      this.isAuthenticated = !!localStorage.getItem('authToken');
-      console.log(localStorage.getItem('authToken'))
-      this.userName = localStorage.getItem('userEmail')?.split('@')[0] || 'Пользователь';
-      this.userEmail = localStorage.getItem('userEmail') || '';
-    }
-  },
-  computed: {
-    initials() {
-      if (!this.userName) return '';
-      return this.userName.split(' ').map(name => name[0].toUpperCase()).join('');
-    },
-  },
-  methods: {
-    toggleProfile() {
-      this.showProfile = !this.showProfile;
-    },
-    goToProfile() {
-      this.$router.push('/profile');
-      this.showProfile = false;
-    },
-    logout() {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('userEmail');
-      this.$emit('logout');
-      this.showProfile = false;
-    },
-    updateUserInfo() {
+
+    const closeProfile = () => {
+      showProfile.value = false;
+    };
+
+    const handleClickOutside = (event) => {
+      if (profileCircle.value && !profileCircle.value.contains(event.target)) {
+        closeProfile();
+      }
+    };
+
+    const updateUserInfo = () => {
       const email = localStorage.getItem('userEmail');
+      const fullName = localStorage.getItem('userFullName');
       if (email) {
-        this.userEmail = email;
-        // Здесь можно добавить API-запрос для получения информации о пользователе
-        this.userName = email.split('@')[0];
-        this.userImage = '';
+        userEmail.value = email;
+        userFullName.value = fullName || email.split('@')[0];
+        userImage.value = '';
       } else {
-        this.userEmail = '';
-        this.userName = '';
-        this.userImage = '';
+        userEmail.value = '';
+        userFullName.value = '';
+        userImage.value = '';
       }
-    }
-  },
-  created() {
-    this.updateUserInfo();
-    // Слушаем события входа/выхода
-    window.addEventListener('user-logged-in', () => {
-      this.updateUserInfo();
-      this.$forceUpdate();
+    };
+
+    const goToProfile = () => {
+      router.push('/profile');
+      closeProfile();
+    };
+
+    const logout = () => {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('userFullName');
+      updateUserInfo();
+      closeProfile();
+      router.push('/');
+    };
+
+    onMounted(() => {
+      updateUserInfo();
+      document.addEventListener('click', handleClickOutside);
     });
-    window.addEventListener('user-logged-out', () => {
-      this.userEmail = '';
-      this.userName = '';
-      this.userImage = '';
-      this.$forceUpdate();
+
+    onBeforeUnmount(() => {
+      document.removeEventListener('click', handleClickOutside);
     });
-  },
-  beforeUnmount() {
-    window.removeEventListener('user-logged-in', () => {
-      this.updateUserInfo();
-      this.$forceUpdate();
-    });
-    window.removeEventListener('user-logged-out', () => {
-      this.userEmail = '';
-      this.userName = '';
-      this.userImage = '';
-      this.$forceUpdate();
-    });
-  },
-  watch: {
-    userEmail: {
-      immediate: true,
-      handler(newEmail) {
-        if (newEmail) {
-          this.updateUserInfo();
-        }
-      }
-    }
-  },
+
+    return {
+      showProfile,
+      userFullName,
+      userEmail,
+      userImage,
+      initials,
+      toggleProfile,
+      goToProfile,
+      logout,
+      profileCircle
+    };
+  }
 };
 </script>
 
@@ -141,7 +119,7 @@ export default {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: #2c3e50;
+  background-color: #e67e22;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -180,10 +158,11 @@ export default {
   border-bottom: 1px solid #eee;
 }
 
-.user-name {
+.user-fullname {
   font-size: 1.1rem;
   font-weight: 500;
   color: #2c3e50;
+  margin-bottom: 0.3rem;
 }
 
 .user-email {
@@ -210,5 +189,14 @@ export default {
 
 .profile-actions button:hover {
   background: #dcdde1;
+}
+
+.logout-btn {
+  background: #e74c3c !important;
+  color: white !important;
+}
+
+.logout-btn:hover {
+  background: #c0392b !important;
 }
 </style>

@@ -21,7 +21,6 @@ export async function loadAttachment(id, token) {
     // Сначала пробуем получить метаданные attachment
     const response = await axios.get(`${API_BASE_URL}/attachments/?id_=${id}`, {
       headers: {
-        Authorization: `Bearer ${token}`
       }
     });
     
@@ -47,7 +46,6 @@ export async function loadAttachment(id, token) {
       try {
         const altResponse = await axios.get(endpoint, {
           headers: {
-            Authorization: `Bearer ${token}`
           }
         });
         

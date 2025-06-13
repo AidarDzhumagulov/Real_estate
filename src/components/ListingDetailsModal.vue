@@ -29,6 +29,10 @@
               <span class="label">Этаж:</span>
               <span class="value">{{ listing.floor || 'Не указано' }}</span>
             </div>
+            <div class="info-item">
+              <span class="label">Добавил:</span>
+              <span class="value">{{ listing.creator.user_name || 'Не указано' }}</span>
+            </div>
           </div>
 
           <div class="description-section">

@@ -28,13 +28,8 @@ export const loginUser = async (credentials) => {
     const response = await api.post('/api/users/login/', credentials, {
       withCredentials: true
     });
-    
-    const { access_token } = response.data;
-    if (access_token) {
-      localStorage.setItem('authToken', access_token);
-    }
 
-      return response.data;
+      return response;
   } catch (error) {
     console.error('Ошибка входа:', error.response?.data || error.message);
     throw error;
