@@ -4,17 +4,22 @@ from pydantic import AnyUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+ENV_PATH = BASE_DIR / ".env"  # абсолютный путь до .env
+
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=ENV_PATH,
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
 
     # settings FastAPI
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "Athena Backend"
 
     SECRET_KEY: str
-
     JWT_ALGORITHM: str
-
     JWT_ACCESS_COOKIE_NAME: str
 
     ACCESS_TOKEN_EXPIRE_MINUTES: int
@@ -30,9 +35,8 @@ class Settings(BaseSettings):
     POSTGRES_DB: str
     POSTGRES_PORT: str
 
-
     @property
-    def DATABASE_URL(self) -> str:  # noqa: N802
+    def DATABASE_URL(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     LOGLEVEL: str = "DEBUG"
@@ -43,12 +47,11 @@ class Settings(BaseSettings):
     STRIPE_WH_SECRET: str
 
     @property
-    def DO_SPACE_URL_WITH_BUCKET(self) -> str:  # noqa: N802
+    def DO_SPACE_URL_WITH_BUCKET(self) -> str:
         url = AnyUrl(self.DO_SPACE_URL)
         return f"{url.scheme}://{self.DO_SPACE_BUCKET}.{url.host}"
 
-    # Build paths inside the project like this: BASE_DIR / 'subdir'.
-    BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
+    BASE_DIR: Path = BASE_DIR
 
 
 settings = Settings()  # type: ignore
