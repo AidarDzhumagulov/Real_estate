@@ -15,10 +15,6 @@ origins = ["http://localhost:5173"]
 
 
 middlewares = [
-    # NOTE(axd1x8a): The order of middlewares is important
-    # If you want to add new middleware, ask me first
-    # or try to write it as ASGI middleware or else you will break whole app
-    # good luck :)
     Middleware(
         CORSMiddleware,
         allow_origins=origins,

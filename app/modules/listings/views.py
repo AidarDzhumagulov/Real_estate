@@ -38,7 +38,7 @@ async def delete_listing(
     return await listing_logic.delete(id_=id_, current_user=current_user)
 
 
-@listing_router.patch("/{id_}", response_model=ListingGet, dependencies=[Depends(auth.access_token_required)])
+@listing_router.put("/{id_}", response_model=ListingGet, dependencies=[Depends(auth.access_token_required)])
 async def update_listing(
     id_: UUID,
     listing: ListingUpdate,

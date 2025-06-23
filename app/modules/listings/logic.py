@@ -11,6 +11,8 @@ from app.base.logic import BaseLogic
 from app.modules.listings.models import Listing, ListingAttachment
 from app.modules.listings.schemas import ListingCreate, ListingUpdate
 from app.modules.users.models import User
+from app.modules.listings.schemas import ListingGet
+
 
 
 class ListingBusinessLogic(BaseLogic):
@@ -79,22 +81,22 @@ class ListingBusinessLogic(BaseLogic):
                     updated_by=current_user.id,
                 )
             )
-
             await self.repository.session.execute(stmt)
             await self.repository.session.commit()
 
             stmt_select = (
                 select(self.Model)
                 .where(self.Model.id == id_)
-                .options(joinedload(self.Model.attachments))
+                .options(joinedload(self.Model.attachments), joinedload(self.Model.creator))
             )
             result_select = await self.repository.session.execute(stmt_select)
-            updated_listing_with_attachments = result_select.unique().scalar_one_or_none()
+            updated_listing = result_select.unique().scalar_one_or_none()
 
-            if updated_listing_with_attachments is None:
+            if updated_listing is None:
                 raise HTTPException(status_code=404, detail="Listing not found")
 
-            return updated_listing_with_attachments
+            # Фикс: возвращаем Pydantic-схему
+            return ListingGet.model_validate(updated_listing)
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
